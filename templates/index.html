@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Application Bot — Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:        #06060e;
+            --surface:   rgba(255,255,255,0.03);
+            --surface-2: rgba(255,255,255,0.06);
+            --border:    rgba(255,255,255,0.08);
+            --text:      #e4e4ef;
+            --text-dim:  #7a7a8e;
+            --accent:    #6c63ff;
+            --accent-g:  linear-gradient(135deg, #6c63ff, #a855f7);
+            --green:     #22c55e;
+            --red:       #ef4444;
+            --orange:    #f59e0b;
+            --blue:      #3b82f6;
+            --radius:    14px;
+            --glass:     saturate(1.5) blur(18px);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Background blobs */
+        body::before, body::after {
+            content: '';
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: .18;
+            z-index: 0;
+            pointer-events: none;
+        }
+        body::before { width: 600px; height: 600px; background: #6c63ff; top: -200px; left: -100px; }
+        body::after  { width: 500px; height: 500px; background: #a855f7; bottom: -200px; right: -100px; }
+
+        .container { max-width: 1280px; margin: 0 auto; padding: 32px 24px; position: relative; z-index: 1; }
+
+        /* Header */
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 {
+            font-size: 2.4rem; font-weight: 800;
+            background: var(--accent-g); -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent; background-clip: text;
+            letter-spacing: -1px;
+        }
+        .header p { color: var(--text-dim); margin-top: 6px; font-size: .95rem; }
+
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .stat-card {
+            background: var(--surface);
+            backdrop-filter: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 22px 20px;
+            transition: transform .2s, border-color .3s;
+        }
+        .stat-card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,.15); }
+        .stat-card .label { font-size: .78rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+        .stat-card .value {
+            font-size: 2rem; font-weight: 800; margin-top: 6px;
+            background: var(--accent-g); -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .stat-card.green .value  { background: linear-gradient(135deg, #22c55e, #4ade80); -webkit-background-clip: text; background-clip: text; }
+        .stat-card.orange .value { background: linear-gradient(135deg, #f59e0b, #fbbf24); -webkit-background-clip: text; background-clip: text; }
+        .stat-card.red .value    { background: linear-gradient(135deg, #ef4444, #f87171); -webkit-background-clip: text; background-clip: text; }
+        .stat-card.blue .value   { background: linear-gradient(135deg, #3b82f6, #60a5fa); -webkit-background-clip: text; background-clip: text; }
+
+        /* Section titles */
+        .section-title {
+            font-size: 1.1rem; font-weight: 700; margin-bottom: 16px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .section-title .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+
+        /* Controls */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .control-card {
+            background: var(--surface);
+            backdrop-filter: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            display: flex; flex-direction: column; gap: 14px;
+        }
+        .control-card .card-header {
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .control-card .card-title { font-weight: 700; font-size: 1rem; }
+        .status-badge {
+            font-size: .72rem; font-weight: 600; text-transform: uppercase;
+            padding: 4px 10px; border-radius: 20px; letter-spacing: .5px;
+        }
+        .status-badge.idle    { background: rgba(122,122,142,.15); color: #7a7a8e; }
+        .status-badge.running { background: rgba(34,197,94,.15); color: #4ade80; animation: pulse-badge 1.5s infinite; }
+        .status-badge.stopped { background: rgba(239,68,68,.15); color: #f87171; }
+        .status-badge.error   { background: rgba(239,68,68,.15); color: #f87171; }
+        @keyframes pulse-badge { 0%, 100% { opacity: 1; } 50% { opacity: .6; } }
+
+        .control-card .desc { font-size: .85rem; color: var(--text-dim); line-height: 1.5; }
+
+        .btn-row { display: flex; gap: 10px; }
+        .btn {
+            flex: 1; padding: 10px 16px; border: none; border-radius: 10px;
+            font-family: inherit; font-weight: 600; font-size: .85rem;
+            cursor: pointer; transition: all .2s;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .btn:active { transform: scale(.97); }
+        .btn-start {
+            background: var(--accent-g); color: #fff;
+            box-shadow: 0 4px 20px rgba(108,99,255,.25);
+        }
+        .btn-start:hover { box-shadow: 0 6px 30px rgba(108,99,255,.4); }
+        .btn-start:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
+        .btn-stop {
+            background: rgba(239,68,68,.12); color: #f87171; border: 1px solid rgba(239,68,68,.2);
+        }
+        .btn-stop:hover { background: rgba(239,68,68,.2); }
+        .btn-stop:disabled { opacity: .3; cursor: not-allowed; }
+
+        /* Logs */
+        .logs-section { margin-bottom: 32px; }
+        .log-tabs { display: flex; gap: 4px; margin-bottom: 0; }
+        .log-tab {
+            padding: 10px 20px; background: var(--surface); border: 1px solid var(--border);
+            border-bottom: none; border-radius: 10px 10px 0 0;
+            font-family: inherit; font-size: .82rem; font-weight: 600;
+            color: var(--text-dim); cursor: pointer; transition: all .2s;
+        }
+        .log-tab.active { background: var(--surface-2); color: var(--text); border-color: rgba(108,99,255,.3); }
+        .log-tab:hover { color: var(--text); }
+
+        .log-viewer {
+            background: rgba(0,0,0,.5);
+            border: 1px solid var(--border);
+            border-radius: 0 var(--radius) var(--radius) var(--radius);
+            padding: 16px;
+            height: 320px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .8rem;
+            line-height: 1.7;
+            color: #b0b0c8;
+        }
+        .log-viewer::-webkit-scrollbar { width: 6px; }
+        .log-viewer::-webkit-scrollbar-track { background: transparent; }
+        .log-viewer::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
+
+        .log-line { white-space: pre-wrap; word-break: break-all; }
+        .log-line.system { color: #6c63ff; }
+        .log-line.error  { color: #f87171; }
+        .log-line.success { color: #4ade80; }
+
+        .log-empty { color: var(--text-dim); font-style: italic; padding: 40px; text-align: center; }
+
+        /* Jobs Table */
+        .table-wrapper {
+            background: var(--surface);
+            backdrop-filter: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        .table-toolbar {
+            padding: 16px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+        .search-input {
+            background: rgba(255,255,255,.05);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 14px;
+            color: var(--text);
+            font-family: inherit; font-size: .85rem;
+            outline: none; width: 260px;
+            transition: border-color .2s;
+        }
+        .search-input:focus { border-color: var(--accent); }
+        .search-input::placeholder { color: var(--text-dim); }
+
+        .table-scroll { max-height: 420px; overflow-y: auto; }
+        .table-scroll::-webkit-scrollbar { width: 6px; }
+        .table-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 3px; }
+
+        table { width: 100%; border-collapse: collapse; }
+        thead { position: sticky; top: 0; z-index: 2; }
+        th {
+            text-align: left; padding: 12px 16px;
+            font-size: .75rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: .8px; color: var(--text-dim);
+            background: rgba(6,6,14,.9); border-bottom: 1px solid var(--border);
+        }
+        td {
+            padding: 11px 16px; font-size: .84rem;
+            border-bottom: 1px solid rgba(255,255,255,.03);
+            max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        tr:hover td { background: rgba(255,255,255,.02); }
+        .email-yes { color: #4ade80; font-weight: 600; }
+        .email-no  { color: var(--text-dim); }
+        .no-email  { color: #f87171; font-style: italic; font-size: .8rem; }
+
+        /* Footer */
+        .footer {
+            text-align: center; padding: 24px; margin-top: 20px;
+            color: var(--text-dim); font-size: .78rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .header h1 { font-size: 1.6rem; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .controls-grid { grid-template-columns: 1fr; }
+            .search-input { width: 160px; }
+        }
+
+        /* Notification Toast */
+        .toast {
+            position: fixed; bottom: 24px; right: 24px;
+            padding: 14px 22px; border-radius: 12px;
+            font-size: .88rem; font-weight: 600;
+            background: rgba(34,197,94,.15); color: #4ade80;
+            border: 1px solid rgba(34,197,94,.25);
+            backdrop-filter: blur(12px);
+            transform: translateY(80px); opacity: 0;
+            transition: all .4s cubic-bezier(.22,1,.36,1);
+            z-index: 999;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.error { background: rgba(239,68,68,.15); color: #f87171; border-color: rgba(239,68,68,.25); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Header -->
+    <div class="header">
+        <h1>⚡ Job Application Bot</h1>
+        <p>Scrape jobs, find HR emails, and send applications — all from one dashboard.</p>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+        <div class="stat-card blue">
+            <div class="label">Total Jobs</div>
+            <div class="value" id="stat-total">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Emails Found</div>
+            <div class="value" id="stat-found">—</div>
+        </div>
+        <div class="stat-card green">
+            <div class="label">Emails Sent</div>
+            <div class="value" id="stat-sent">—</div>
+        </div>
+        <div class="stat-card orange">
+            <div class="label">Pending</div>
+            <div class="value" id="stat-pending">—</div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="section-title"><span class="dot"></span> Script Controls</div>
+    <div class="controls-grid">
+        <!-- Scraper -->
+        <div class="control-card">
+            <div class="card-header">
+                <div class="card-title">🔍 Job Scraper</div>
+                <span class="status-badge idle" id="badge-scraper">IDLE</span>
+            </div>
+            <div class="desc">Scrapes job listings from Google Jobs and saves them to CSV.</div>
+            <div class="btn-row">
+                <button class="btn btn-start" onclick="startScript('scraper')">▶ Start</button>
+                <button class="btn btn-stop" disabled onclick="stopScript('scraper')">■ Stop</button>
+            </div>
+        </div>
+        <!-- Email Finder -->
+        <div class="control-card">
+            <div class="card-header">
+                <div class="card-title">📧 Email Finder</div>
+                <span class="status-badge idle" id="badge-email_finder">IDLE</span>
+            </div>
+            <div class="desc">Finds HR/recruiter emails for each scraped job using Apollo API.</div>
+            <div class="btn-row">
+                <button class="btn btn-start" onclick="startScript('email_finder')">▶ Start</button>
+                <button class="btn btn-stop" disabled onclick="stopScript('email_finder')">■ Stop</button>
+            </div>
+        </div>
+        <!-- Mailer -->
+        <div class="control-card">
+            <div class="card-header">
+                <div class="card-title">🚀 Auto Mailer</div>
+                <span class="status-badge idle" id="badge-mailer">IDLE</span>
+            </div>
+            <div class="desc">Sends personalized emails with your resume to HR contacts. 5-min delay between sends.</div>
+            <div class="btn-row">
+                <button class="btn btn-start" onclick="startScript('mailer')">▶ Start</button>
+                <button class="btn btn-stop" disabled onclick="stopScript('mailer')">■ Stop</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logs -->
+    <div class="logs-section">
+        <div class="section-title"><span class="dot"></span> Live Logs</div>
+        <div class="log-tabs">
+            <button class="log-tab active" onclick="switchTab('scraper')">Scraper</button>
+            <button class="log-tab" onclick="switchTab('email_finder')">Email Finder</button>
+            <button class="log-tab" onclick="switchTab('mailer')">Mailer</button>
+        </div>
+        <div class="log-viewer" id="log-viewer">
+            <div class="log-empty">No logs yet. Start a script to see output here.</div>
+        </div>
+    </div>
+
+    <!-- Jobs Table -->
+    <div class="section-title"><span class="dot"></span> Job Data</div>
+    <div class="table-wrapper">
+        <div class="table-toolbar">
+            <span style="font-weight:600; font-size:.92rem;">Jobs from CSV</span>
+            <input class="search-input" id="search" type="text" placeholder="Search jobs..." oninput="filterTable()">
+        </div>
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Job Title</th>
+                        <th>Company</th>
+                        <th>Location</th>
+                        <th>HR Email</th>
+                        <th>Sent</th>
+                    </tr>
+                </thead>
+                <tbody id="jobs-body">
+                    <tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:30px;">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="footer">Job Application Bot &bull; Built with Flask &bull; Running locally on your machine</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──
+let activeTab = 'scraper';
+let logCursors = { scraper: 0, email_finder: 0, mailer: 0 };
+let allJobs = [];
+
+// ── Toast ──
+function showToast(msg, isError = false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (isError ? ' error' : '');
+    setTimeout(() => t.className = 'toast', 3000);
+}
+
+// ── Start/Stop Scripts ──
+async function startScript(name) {
+    try {
+        logCursors[name] = 0;  // reset log cursor
+        const res = await fetch(`/api/start/${name}`, { method: 'POST' });
+        const data = await res.json();
+        showToast(data.msg, !data.ok);
+        switchTab(name);
+        refreshStatus();
+    } catch (e) {
+        showToast('Failed to start: ' + e.message, true);
+    }
+}
+
+async function stopScript(name) {
+    try {
+        const res = await fetch(`/api/stop/${name}`, { method: 'POST' });
+        const data = await res.json();
+        showToast(data.msg, !data.ok);
+        refreshStatus();
+    } catch(e) {
+        showToast('Failed to stop: ' + e.message, true);
+    }
+}
+
+// ── Refresh Status ──
+async function refreshStatus() {
+    try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        for (const [name, status] of Object.entries(data)) {
+            const badge = document.getElementById(`badge-${name}`);
+            if (!badge) continue;
+
+            let cls = 'idle';
+            let label = 'IDLE';
+            if (status === 'running') { cls = 'running'; label = 'RUNNING'; }
+            else if (status.startsWith('stopped') || status === 'error') { cls = 'stopped'; label = status.toUpperCase(); }
+
+            badge.className = `status-badge ${cls}`;
+            badge.textContent = label;
+
+            // Toggle buttons
+            const card = badge.closest('.control-card');
+            const startBtn = card.querySelector('.btn-start');
+            const stopBtn = card.querySelector('.btn-stop');
+            startBtn.disabled = (status === 'running');
+            stopBtn.disabled = (status !== 'running');
+        }
+    } catch(e) {}
+}
+
+// ── Refresh Stats ──
+async function refreshStats() {
+    try {
+        const res = await fetch('/api/stats');
+        const d = await res.json();
+        document.getElementById('stat-total').textContent = d.total_jobs;
+        document.getElementById('stat-found').textContent = d.emails_found;
+        document.getElementById('stat-sent').textContent = d.emails_sent;
+        document.getElementById('stat-pending').textContent = d.emails_pending;
+    } catch(e) {}
+}
+
+// ── Logs ──
+function switchTab(name) {
+    activeTab = name;
+    document.querySelectorAll('.log-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.log-tab').forEach(t => {
+        if (t.textContent.toLowerCase().replace(/\s/g, '_') === name ||
+            (name === 'scraper' && t.textContent === 'Scraper') ||
+            (name === 'email_finder' && t.textContent === 'Email Finder') ||
+            (name === 'mailer' && t.textContent === 'Mailer'))
+            t.classList.add('active');
+    });
+    // Clear viewer and reset cursor display
+    logCursors[name] = 0;
+    document.getElementById('log-viewer').innerHTML = '<div class="log-empty">Loading logs...</div>';
+    refreshLogs();
+}
+
+async function refreshLogs() {
+    try {
+        const res = await fetch(`/api/logs/${activeTab}?after=${logCursors[activeTab]}`);
+        const data = await res.json();
+        const viewer = document.getElementById('log-viewer');
+
+        if (logCursors[activeTab] === 0 && data.lines.length === 0) {
+            viewer.innerHTML = '<div class="log-empty">No logs yet. Start the script to see output here.</div>';
+            return;
+        }
+
+        if (logCursors[activeTab] === 0) {
+            viewer.innerHTML = '';
+        }
+
+        for (const line of data.lines) {
+            const div = document.createElement('div');
+            div.className = 'log-line';
+            if (line.startsWith('[SYSTEM]')) div.classList.add('system');
+            else if (line.startsWith('[ERROR]') || line.toLowerCase().includes('error') || line.toLowerCase().includes('failed')) div.classList.add('error');
+            else if (line.includes('Success') || line.includes('success')) div.classList.add('success');
+            div.textContent = line;
+            viewer.appendChild(div);
+        }
+
+        logCursors[activeTab] = data.total;
+
+        if (data.lines.length > 0) {
+            viewer.scrollTop = viewer.scrollHeight;
+        }
+    } catch(e) {}
+}
+
+// ── Jobs Table ──
+async function refreshJobs() {
+    try {
+        const res = await fetch('/api/jobs');
+        allJobs = await res.json();
+        renderJobs(allJobs);
+    } catch(e) {}
+}
+
+function renderJobs(jobs) {
+    const tbody = document.getElementById('jobs-body');
+    if (jobs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:30px;">No job data found. Run the Job Scraper first.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = jobs.map((j, i) => {
+        const email = j['HR_Email'] || '';
+        const sent = j['Email_Sent'] || 'No';
+        const emailCell = email ? `<span title="${email}">${email.substring(0, 30)}${email.length > 30 ? '…' : ''}</span>` : '<span class="no-email">—</span>';
+        const sentCell = sent === 'Yes' ? '<span class="email-yes">✓ Yes</span>' : '<span class="email-no">No</span>';
+        return `<tr>
+            <td>${i + 1}</td>
+            <td title="${j['Job Title'] || ''}">${j['Job Title'] || '—'}</td>
+            <td title="${j['Company Name'] || ''}">${j['Company Name'] || '—'}</td>
+            <td>${j['Location'] || '—'}</td>
+            <td>${emailCell}</td>
+            <td>${sentCell}</td>
+        </tr>`;
+    }).join('');
+}
+
+function filterTable() {
+    const q = document.getElementById('search').value.toLowerCase();
+    if (!q) { renderJobs(allJobs); return; }
+    const filtered = allJobs.filter(j =>
+        (j['Job Title'] || '').toLowerCase().includes(q) ||
+        (j['Company Name'] || '').toLowerCase().includes(q) ||
+        (j['Location'] || '').toLowerCase().includes(q) ||
+        (j['HR_Email'] || '').toLowerCase().includes(q)
+    );
+    renderJobs(filtered);
+}
+
+// ── Polling loop ──
+function startPolling() {
+    refreshStats();
+    refreshStatus();
+    refreshJobs();
+
+    setInterval(refreshStats, 5000);
+    setInterval(refreshStatus, 2000);
+    setInterval(refreshLogs, 1500);
+    setInterval(refreshJobs, 15000);
+}
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', startPolling);
+</script>
+
+</body>
+</html>

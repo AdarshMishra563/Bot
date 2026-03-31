@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: job-bot-dashboard
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn dashboard:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 0
+    envVars:
+      - key: SENDER_EMAIL
+        sync: false
+      - key: SENDER_PASSWORD
+        sync: false
+      - key: SERPAPI_KEY
+        sync: false
+      - key: APOLLO_API_KEY
+        sync: false
