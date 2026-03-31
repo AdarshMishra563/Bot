@@ -10,8 +10,8 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-SENDER_EMAIL = str(os.getenv("SENDER_EMAIL", ""))
-SENDER_PASSWORD = str(os.getenv("SENDER_PASSWORD", ""))
+SENDER_EMAIL = str(os.getenv("SENDER_EMAIL", "")).strip(" \"'")
+SENDER_PASSWORD = str(os.getenv("SENDER_PASSWORD", "")).strip(" \"'")
 
 # The path to your resume file
 RESUME_PATH = "Resume_AdarshMishra1.pdf"
@@ -54,14 +54,18 @@ Adarsh Mishra
 
     # Send the email using Gmail's SMTP server
     try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
+        # Using SMTP_SSL on 465 is often preferred on cloud servers to avoid port 587 blocks
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
         server.login(SENDER_EMAIL, SENDER_PASSWORD)
         server.send_message(msg)
         server.quit()
         return True
+    except smtplib.SMTPAuthenticationError as e:
+        print(f"Auth Error for {to_email}: {e}")
+        print(" -> Hint: Google blocked the Render server IP OR your App Password on Render contains a typo.")
+        return False
     except Exception as e:
-        print(f"Failed to send email to {to_email}: {e}")
+        print(f"Failed to send email to {to_email}: {type(e).__name__} - {e}")
         return False
 
 def process_emails():
