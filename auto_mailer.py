@@ -8,13 +8,6 @@ from email.mime.application import MIMEApplication
 from dotenv import load_dotenv
 import socket
 
-# Force Python to use IPv4 instead of IPv6 
-# (Render servers often lack IPv6 routing which causes [Errno 101] Network is unreachable in Python, whereas Node handles it automatically)
-old_getaddrinfo = socket.getaddrinfo
-def ipv4_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
-    return old_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
-socket.getaddrinfo = ipv4_getaddrinfo
-
 # Load environment variables
 load_dotenv()
 
