@@ -62,8 +62,9 @@ Adarsh Mishra
 
     # Send the email using Gmail's SMTP server
     try:
-        # Using SMTP_SSL on 465 is often preferred on cloud servers to avoid port 587 blocks
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        # Port 587 with STARTTLS is the standard for Gmail
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
         server.login(SENDER_EMAIL, SENDER_PASSWORD)
         server.send_message(msg)
         server.quit()
